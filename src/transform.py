@@ -81,25 +81,10 @@ def processar_csv(csv_path):
     if not chunks_final:
         raise Exception("Nenhum dado válido do Piauí atendeu aos critérios da metodologia.")
 
-    # Consolida todos os lotes limpos na memória
-    df_consolidado = pd.concat(chunks_final, ignore_index=True)
-    print(f"Total de linhas pré-filtradas (PI): {linhas_total}")
-
-    # =========================================================================
-    # FILTRO DE REPRESENTATIVIDADE ESTATÍSTICA (Mínimo de 10 Admissões)
-    # =========================================================================
-    print("Aplicando filtro de representatividade estatística (MIN_N = 10)...")
+    # Consolida todos os lotes limpos na memória e retorna diretamente
+    df_final = pd.concat(chunks_final, ignore_index=True)
+    print(f"Total de linhas processadas e salvas (PI): {linhas_total}")
     
-    # Calcula a contagem de contratações por ocupação (CBO)
-    contagem_cbo = df_consolidado.groupby("cbo").size().reset_index(name="total_admissoes")
-    
-    # Filtra os CBOs que possuem pelo menos 10 registros
-    cbos_validos = contagem_cbo[contagem_cbo["total_admissoes"] >= 10]
-    
-    # Mantém no DataFrame apenas as ocupações com representatividade
-    df_final = df_consolidado.merge(cbos_validos[["cbo"]], on="cbo", how="inner")
-    
-    print(f"Linhas finais após filtro de representatividade: {len(df_final)}")
     return df_final
 
 
