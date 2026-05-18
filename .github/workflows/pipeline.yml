@@ -1,0 +1,28 @@
+name: CAGED PI Auto Update
+
+on:
+  schedule:
+    # Roda diariamente às 09:00 UTC (06:00 Brasília) entre os dias 24 e 31
+    - cron: '0 9 24-31 * *'
+  workflow_dispatch: # Botão para rodar manualmente
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ETL
+        env:
+          # Aqui você linka os segredos que cadastrou no GitHub
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_DIR: ${{ secrets.FTP_DIR }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: python main.py
