@@ -35,12 +35,12 @@ def processar_csv(csv_path):
         chunksize=500_000,
         low_memory=False
     ):
-        # 1. Garante a tipagem numérica das colunas de filtro para evitar falhas de máscara
+        # 1. Garante a tipagem numérica usando os nomes exatos das colunas do CAGED (com acentos)
         chunk["uf"] = pd.to_numeric(chunk["uf"], errors="coerce")
-        chunk["saldomovimentacao"] = pd.to_numeric(chunk["saldomovimentacao"], errors="coerce")
+        chunk["saldomovimentação"] = pd.to_numeric(chunk["saldomovimentação"], errors="coerce")
         chunk["indicadordeforadoprazo"] = pd.to_numeric(chunk["indicadordeforadoprazo"], errors="coerce")
         chunk["indtrabintermitente"] = pd.to_numeric(chunk["indtrabintermitente"], errors="coerce")
-        chunk["unidadesalariocodigo"] = pd.to_numeric(chunk["unidadesalariocodigo"], errors="coerce")
+        chunk["unidadesaláriocódigo"] = pd.to_numeric(chunk["unidadesaláriocódigo"], errors="coerce")
         
         # Tratamento do salário antes do filtro numérico
         chunk["salário"] = (
@@ -50,13 +50,13 @@ def processar_csv(csv_path):
         )
         chunk["salário"] = pd.to_numeric(chunk["salário"], errors="coerce")
 
-        # 2. Aplicação Rigorosa dos Filtros de Qualidade (Metodologia)
+        # 2. Aplicação Rigorosa dos Filtros da Metodologia com os nomes corretos das colunas
         mascara = (
-            (chunk["uf"] == 22) &                       # Mantém o escopo no Piauí
-            (chunk["saldomovimentacao"] == 1) &         # Apenas Admissões
+            (chunk["uf"] == 22) &                        # Mantém o escopo no Piauí
+            (chunk["saldomovimentação"] == 1) &          # Apenas Admissões
             (chunk["indicadordeforadoprazo"] == 0) &     # Declarações no Prazo
             (chunk["indtrabintermitente"] == 0) &        # Exclui Trabalho Intermitente
-            (chunk["unidadesalariocodigo"] == 5) &       # Padronização: Apenas Salário Mensal
+            (chunk["unidadesaláriocódigo"] == 5) &       # Padronização: Apenas Salário Mensal
             (chunk["salário"] > 0)                       # Salários Válidos
         )
 
@@ -65,10 +65,10 @@ def processar_csv(csv_path):
         if chunk_filtrado.empty:
             continue
 
-        # 3. Isola apenas as colunas necessárias para o banco
+        # 3. Isola apenas as 3 colunas necessárias para o seu banco de dados
         chunk_filtrado = chunk_filtrado[["município", "cbo2002ocupação", "salário"]]
 
-        # 4. Renomeia para o padrão do banco de dados
+        # 4. Renomeia de forma limpa para salvar no Supabase sem caracteres especiais
         chunk_filtrado = chunk_filtrado.rename(columns={
             "município": "municipio",
             "cbo2002ocupação": "cbo",
@@ -96,7 +96,7 @@ def processar_csv(csv_path):
     # Filtra os CBOs que possuem pelo menos 10 registros
     cbos_validos = contagem_cbo[contagem_cbo["total_admissoes"] >= 10]
     
-    # Faz um INNER JOIN para manter no DataFrame apenas as ocupações com representatividade
+    # Mantém no DataFrame apenas as ocupações com representatividade
     df_final = df_consolidado.merge(cbos_validos[["cbo"]], on="cbo", how="inner")
     
     print(f"Linhas finais após filtro de representatividade: {len(df_final)}")
