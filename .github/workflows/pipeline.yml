@@ -25,4 +25,4 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_DIR: ${{ secrets.FTP_DIR }}
           DB_URL: ${{ secrets.DB_URL }}
-        run: python main.py
+        run: python src/main.py
