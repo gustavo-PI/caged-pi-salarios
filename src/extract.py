@@ -22,10 +22,9 @@ def connect_ftp():
 def run_extraction():
     ftp = connect_ftp()
 
-    # O 'with' garante que a conexão fecha sozinha no final
     with ftp:
         try:
-            # 1. Navega até o mês mais recente
+            # navega até o mês mais recente
             ftp.cwd(FTP_DIR)
             ultimo_ano = sorted([a for a in ftp.nlst() if a.isdigit()])[-1]
             
@@ -35,7 +34,7 @@ def run_extraction():
             ftp.cwd(f"{FTP_DIR}/{ultimo_ano}/{ultimo_mes}")
             print(f"Competência encontrada: {ultimo_mes}/{ultimo_ano}")
 
-            # 2. Localiza o arquivo das movimentações (CAGEDMOV)
+            # localiza o arquivo das movimentações
             files = ftp.nlst()
             arquivos_mov = sorted([f for f in files if "CAGEDMOV" in f and f.endswith(".7z")])
             
@@ -44,7 +43,7 @@ def run_extraction():
             
             arquivo = arquivos_mov[-1]
 
-            # 3. Faz o download do arquivo
+            # download do arquivo
             os.makedirs(LOCAL_PATH, exist_ok=True)
             file_path = os.path.join(LOCAL_PATH, arquivo)
 
