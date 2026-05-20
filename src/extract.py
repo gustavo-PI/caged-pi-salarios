@@ -6,7 +6,6 @@ load_dotenv()
 
 FTP_HOST = os.getenv("FTP_HOST")
 FTP_DIR = os.getenv("FTP_DIR")
-
 LOCAL_PATH = "data/raw"
 
 
@@ -17,84 +16,47 @@ def connect_ftp():
         print("Conectado ao FTP")
         return ftp
     except Exception as e:
-        raise Exception(f"Erro ao conectar: {e}")
-
-
-def list_files(ftp):
-    ftp.cwd(FTP_DIR)
-    files = ftp.nlst()
-    print(f"{len(files)} arquivos encontrados")
-    return files
-
-
-def get_latest_file(files):
-    arquivos_7z = [f for f in files if f.endswith(".7z")]
-
-    if not arquivos_7z:
-        raise Exception("Nenhum arquivo .7z encontrado")
-
-    arquivos_7z.sort()
-    latest = arquivos_7z[-1]
-
-    print(f"Arquivo mais recente: {latest}")
-    return latest
-
-
-def download_file(ftp, filename):
-    os.makedirs(LOCAL_PATH, exist_ok=True)
-    local_file = os.path.join(LOCAL_PATH, filename)
-
-    if os.path.exists(local_file):
-        print("Arquivo já existe. Pulando download.")
-        return local_file
-
-    with open(local_file, "wb") as f:
-        ftp.retrbinary(f"RETR {filename}", f.write)
-
-    print("Download concluído")
-    return local_file
+        raise Exception(f"Erro ao conectar ao FTP: {e}")
 
 
 def run_extraction():
     ftp = connect_ftp()
 
-    try:
-        # entra na raiz
-        ftp.cwd(FTP_DIR)
+    # O 'with' garante que a conexão fecha sozinha no final
+    with ftp:
+        try:
+            # 1. Navega até o mês mais recente
+            ftp.cwd(FTP_DIR)
+            ultimo_ano = sorted([a for a in ftp.nlst() if a.isdigit()])[-1]
+            
+            ftp.cwd(f"{FTP_DIR}/{ultimo_ano}")
+            ultimo_mes = sorted([m for m in ftp.nlst() if m.isdigit()])[-1]
+            
+            ftp.cwd(f"{FTP_DIR}/{ultimo_ano}/{ultimo_mes}")
+            print(f"Competência encontrada: {ultimo_mes}/{ultimo_ano}")
 
-        # lista anos
-        anos = [a for a in ftp.nlst() if a.isdigit()]
-        ultimo_ano = sorted(anos)[-1]
-        print(f"Ano mais recente: {ultimo_ano}")
+            # 2. Localiza o arquivo das movimentações (CAGEDMOV)
+            files = ftp.nlst()
+            arquivos_mov = sorted([f for f in files if "CAGEDMOV" in f and f.endswith(".7z")])
+            
+            if not arquivos_mov:
+                raise Exception("Arquivo CAGEDMOV não encontrado no servidor.")
+            
+            arquivo = arquivos_mov[-1]
 
-        # entra no ano
-        ftp.cwd(f"{FTP_DIR}/{ultimo_ano}")
+            # 3. Faz o download do arquivo
+            os.makedirs(LOCAL_PATH, exist_ok=True)
+            file_path = os.path.join(LOCAL_PATH, arquivo)
 
-        # lista meses
-        meses = [m for m in ftp.nlst() if m.isdigit()]
-        ultimo_mes = sorted(meses)[-1]
-        print(f"Mês mais recente: {ultimo_mes}")
+            if os.path.exists(file_path):
+                print(f"Arquivo {arquivo} já existe localmente. Pulando download.")
+            else:
+                print(f"Baixando {arquivo}...")
+                with open(file_path, "wb") as f:
+                    ftp.retrbinary(f"RETR {arquivo}", f.write)
+                print("Download concluído com sucesso!")
 
-        # entra no mês
-        caminho_final = f"{FTP_DIR}/{ultimo_ano}/{ultimo_mes}"
-        ftp.cwd(caminho_final)
+            return file_path, ultimo_mes, ultimo_ano
 
-        # lista arquivos
-        files = ftp.nlst()
-
-        arquivos_mov = [f for f in files if "CAGEDMOV" in f and f.endswith(".7z")]
-
-        if not arquivos_mov:
-            raise Exception("Arquivo CAGEDMOV não encontrado")
-
-        arquivo = sorted(arquivos_mov)[-1]
-        print(f"Arquivo selecionado: {arquivo}")
-
-        file_path = download_file(ftp, arquivo)
-
-        # AJUSTE AQUI: Retorna os 3 valores necessários
-        return file_path, ultimo_mes, ultimo_ano
-
-    finally:
-        ftp.quit()
-        print("FTP encerrado")
+        except Exception as e:
+            raise Exception(f"Erro no processo de extração: {e}")
